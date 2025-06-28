@@ -13,39 +13,31 @@ function GameHistory() {
   }
 
   return (
-    <div className="ttt-game-history" style={{
-      margin: "16px 0",
-      padding: 12,
-      background: "var(--bg-secondary)",
-      borderRadius: 8,
-      minWidth: 300,
-      border: "1px solid var(--border-color)",
-    }}>
-      <h2 style={{ marginTop: 0, fontSize: 20 }}>Game History</h2>
+    <div className="ttt-game-history">
+      <h2>Game History</h2>
       <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
         {gameHistory.map((game) => (
-          <li key={game.id} style={{
-            borderBottom: "1px solid var(--border-color)",
-            marginBottom: 8,
-            paddingBottom: 8,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
+          <li key={game.id}>
             <span>
-              {game.endTime} —{" "}
+              <span style={{ fontWeight: 500, color: "var(--text-secondary)", fontSize: 14 }}>{game.endTime}</span> —{" "}
               <span style={{
-                color: game.winner === "X" ? "#1976d2" : game.winner === "O" ? "#ffb300" : "#888",
-                fontWeight: "bold"
+                color:
+                  game.winner === "X"
+                    ? "var(--color-primary)"
+                    : game.winner === "O"
+                    ? "var(--color-secondary)"
+                    : "var(--color-accent)",
+                fontWeight: 700
               }}>
                 {game.winner === "TIE" ? "Tie" : `${game.winner} won`}
               </span>
-              {" "}({game.moves.length} moves)
+              {" "}
+              <span style={{color:"#aaa", fontWeight: 400}}>({game.moves.length} moves)</span>
             </span>
             <button
-              className="btn"
+              className="btn btn-accent"
               onClick={() => loadGameFromHistory(game)}
-              style={{ marginLeft: 8, fontSize: 12, padding: "4px 10px", borderRadius: 6 }}
+              style={{ fontSize: 13, padding: "6px 16px", borderRadius: 9, minWidth:60, boxShadow:'none' }}
             >
               View
             </button>

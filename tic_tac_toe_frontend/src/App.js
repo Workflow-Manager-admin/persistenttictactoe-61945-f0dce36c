@@ -5,61 +5,61 @@ import GameBoard from "./GameBoard";
 import GameControls from "./GameControls";
 import GameHistory from "./GameHistory";
 
-// PUBLIC_INTERFACE
 function App() {
-  // App-level theme state (optional)
-  const [theme, setTheme] = useState("light");
-
+  // Light-only, modern
   useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
-
-  // PUBLIC_INTERFACE
-  const toggleTheme = () => setTheme((prev) => (prev === "light" ? "dark" : "light"));
+    document.documentElement.setAttribute("data-theme", "light");
+  }, []);
 
   return (
     <div className="App">
       <header className="App-header">
-        {/* Theme Toggle */}
-        <button
-          className="theme-toggle"
-          onClick={toggleTheme}
-          aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+        <h1
+          style={{
+            fontFamily: "'Segoe UI', 'Roboto', Arial, sans-serif",
+            fontWeight: 900,
+            fontSize: 44,
+            margin: "12px 0 2px 0",
+            letterSpacing: "1.7px",
+            color: "var(--color-primary)",
+            lineHeight: 1,
+          }}
         >
-          {theme === "light" ? "🌙 Dark" : "☀️ Light"}
-        </button>
-        <h1 style={{
-          fontFamily: "inherit",
-          fontWeight: "bold",
-          fontSize: 42,
-          margin: "16px 0 4px 0",
-          letterSpacing: "2px",
-          color: "var(--text-primary)",
-        }}>Tic Tac Toe</h1>
-        <div style={{
-          color: "var(--text-secondary)", fontSize: 17, marginBottom: 24
-        }}>
+          <span style={{
+            color: "var(--color-accent)", fontWeight: 700, fontSize: 38, verticalAlign:"middle"
+          }}>■ </span>
+          Tic Tac Toe
+        </h1>
+        <div
+          style={{
+            color: "var(--text-secondary)",
+            fontSize: 18,
+            marginBottom: 28,
+            fontWeight: 400,
+            letterSpacing: ".6px"
+          }}
+        >
           Play and keep your games forever.
         </div>
-
         <GameProvider>
           {/* Main Game Area */}
-          <div style={{
-            display: "flex",
-            flexDirection: "row",
-            gap: "48px",
-            justifyContent: "center",
-            alignItems: "flex-start",
-            marginTop: 18
-          }}>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              gap: "54px",
+              justifyContent: "center",
+              alignItems: "flex-start",
+              marginTop: 10,
+              width: "100%",
+              flexWrap:"wrap"
+            }}
+          >
             <div>
               <GameBoardWrapper />
               <GameControls />
             </div>
-            <div style={{
-              minWidth: 320,
-              maxWidth: 380
-            }}>
+            <div style={{ minWidth: 320, maxWidth: 380 }}>
               <GameHistory />
             </div>
           </div>

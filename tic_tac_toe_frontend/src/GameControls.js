@@ -15,12 +15,28 @@ function GameControls() {
   } = useGame();
 
   let statusMsg = "";
+  let statusColor = "var(--color-accent)";
   if (winner === null) {
-    statusMsg = `Current turn: ${currentPlayer}`;
+    statusMsg = `Current Turn: `;
+    statusColor = currentPlayer === "X" ? "var(--color-primary)" : "var(--color-secondary)";
+    statusMsg += (
+      <span style={{
+        color: statusColor,
+        fontWeight: 700,
+        fontFamily: "inherit"
+      }}>{currentPlayer}</span>
+    );
   } else if (winner === "TIE") {
-    statusMsg = "It's a tie!";
+    statusMsg = <span style={{ color: "var(--color-accent)", fontWeight: 700 }}>It's a tie!</span>;
   } else {
-    statusMsg = `Winner: ${winner}`;
+    statusMsg = (
+      <>
+        <span style={{ color: winner === "X" ? "var(--color-primary)" : "var(--color-secondary)", fontWeight: 700 }}>
+          {winner}
+        </span>
+        <span style={{ color: "var(--color-accent)" }}> wins!</span>
+      </>
+    );
   }
 
   // Should "Save Game" only be enabled if just won/tied, not already in history? For now, always enabled if game finished.
@@ -28,28 +44,24 @@ function GameControls() {
   const canSave = gameOver;
 
   return (
-    <div style={{ marginTop: 24, display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div style={{ fontWeight: "bold", fontSize: 18, marginBottom: 8 }}>
+    <div style={{ marginTop: 30, display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <div className="ttt-game-status-bar">
         {statusMsg}
       </div>
-      <div style={{ margin: "6px 0" }}>
+      <div style={{ margin: "10px 0 0 0", display: "flex", gap: 12 }}>
         <button
-          className="btn"
+          className="btn btn-accent"
           onClick={resetGame}
-          style={{ fontSize: 15, padding: "8px 24px", borderRadius: 8 }}
+          style={{ minWidth: 106 }}
         >
           {gameOver ? "New Game" : "Reset"}
         </button>
         {canSave && (
           <button
-            className="btn"
+            className="btn btn-secondary"
             style={{
-              fontSize: 15,
-              padding: "8px 24px",
-              borderRadius: 8,
-              background: "#388e3c",
-              color: "#fff",
-              marginLeft: 14,
+              marginLeft: 3,
+              minWidth: 106,
             }}
             onClick={saveGameToHistory}
           >
