@@ -1,91 +1,132 @@
-import React, { createContext, useState, useContext } from "react";
+// PUBLIC_INTERFACE
+import React, { createContext, useState, useContext, useCallback, useEffect } from "react";
+import * as api from "./api";
 
 // Game state context: Board, turn, status, winner, history, etc.
 const GameContext = createContext();
+
+const EMPTY_BOARD = Array(9).fill(null);
 
 /**
  * PUBLIC_INTERFACE
  * Provides game state and control logic to children.
  */
 export function GameProvider({ children }) {
-  // 0-based 9-element array for board.
-  const [board, setBoard] = useState(Array(9).fill(null));
-  // 'X' or 'O'
+  // The id of the current game
+  const [gameId, setGameId] = useState(null);
+
+  // Synced backend state for the active game
+  const [board, setBoard] = useState(EMPTY_BOARD);
   const [currentPlayer, setCurrentPlayer] = useState("X");
-  // null if game ongoing, 'X' or 'O' if winner, 'TIE' for tie
   const [winner, setWinner] = useState(null);
-  // Indices of winning line, if any
   const [winningLine, setWinningLine] = useState(null);
-  // Move history (for demonstration; could be omitted)
   const [moveHistory, setMoveHistory] = useState([]);
 
-  // For game history, an array of completed games (structure: {id, winner, board, moves, time, ...})
+  // List of all games from backend
   const [gameHistory, setGameHistory] = useState([]);
 
+  // Loading and error UI state
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   // PUBLIC_INTERFACE
-  function handleSquareClick(i) {
-    if (board[i] || winner) return; // Ignore if filled/won
-
-    const newBoard = board.slice();
-    newBoard[i] = currentPlayer;
-    const newHistory = [
-      ...moveHistory,
-      { player: currentPlayer, position: i, board: [...newBoard] },
-    ];
-    setBoard(newBoard);
-    setMoveHistory(newHistory);
-
-    // Check for win
-    const { winner: gameWinner, line } = calculateWinner(newBoard);
-    if (gameWinner) {
-      setWinner(gameWinner);
-      setWinningLine(line);
-    } else if (newBoard.every((cell) => cell)) {
-      setWinner("TIE");
-      setWinningLine(null);
-    } else {
-      setCurrentPlayer(currentPlayer === "X" ? "O" : "X");
+  const refreshGameList = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const games = await api.listGames();
+      setGameHistory(games);
+    } catch (e) {
+      setError(e.error?.detail || "Failed to load games");
+    } finally {
+      setIsLoading(false);
     }
-  }
+  }, []);
 
   // PUBLIC_INTERFACE
-  function resetGame() {
-    setBoard(Array(9).fill(null));
-    setCurrentPlayer("X");
-    setWinner(null);
-    setWinningLine(null);
-    setMoveHistory([]);
-  }
-
-  // PUBLIC_INTERFACE (for demo: add a finished game to history)
-  function saveGameToHistory() {
-    if (winner && (winner === "X" || winner === "O" || winner === "TIE")) {
-      setGameHistory((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          moves: moveHistory,
-          winner,
-          endTime: new Date().toLocaleString(),
-          finalBoard: board,
-        },
-      ]);
+  const newGame = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const game = await api.createGame();
+      setGameId(game.id);
+      syncWithGameState(game);
+      // Refetch game list to include the new game at the top
+      refreshGameList();
+    } catch (e) {
+      setError(e.error?.detail || "Failed to create game");
+    } finally {
+      setIsLoading(false);
     }
-  }
+  }, [refreshGameList]);
 
-  // PUBLIC_INTERFACE
-  function loadGameFromHistory(game) {
-    setBoard(game.finalBoard);
-    setMoveHistory(game.moves);
-    setWinner(game.winner);
-    setWinningLine(calculateWinner(game.finalBoard).line);
-    // Set next player based on move length
-    setCurrentPlayer(
-      (game.moves.length % 2 === 0 ? "X" : "O")
+  // (Rehydrate full state from a backend game record)
+  function syncWithGameState(game) {
+    setBoard(game.board_state.split(",").map(s => (s === " " ? null : s)));
+    setCurrentPlayer(game.current_player);
+    setWinner(game.status === "finished" ? game.winner
+      : game.status === "draw" ? "TIE"
+      : null
     );
+    setMoveHistory(Array.isArray(game.moves) ? game.moves : []);
+    // Determine winning line (if any)
+    let line = null;
+    if (game.status === "finished" && boardHasWinningLine(game.board_state, game.winner)) {
+      line = boardGetWinningLine(game.board_state, game.winner);
+    }
+    setWinningLine(line);
   }
 
-  // To be extended with backend fetch/save.
+  // PUBLIC_INTERFACE
+  const handleSquareClick = useCallback(async (i) => {
+    if (board[i] !== null || winner || !gameId) return; // Ignore filled, game-over, or no game started
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Backend: Make Move; payload: { position, player } (player: X|O)
+      const next = await api.makeMove(gameId, { position: i, player: currentPlayer });
+      syncWithGameState(next);
+      // Refresh game list if finished
+      if (next.status !== "in_progress") refreshGameList();
+    } catch (e) {
+      setError(e.error?.detail || "Move failed");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [board, currentPlayer, winner, gameId, refreshGameList]);
+
+  // PUBLIC_INTERFACE
+  const resetGame = useCallback(() => {
+    // Start a new backend game
+    newGame();
+  }, [newGame]);
+
+  // PUBLIC_INTERFACE
+  const loadGameFromHistory = useCallback(async (gameObj) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Refetch latest game state from server
+      const full = await api.getGameState(gameObj.id);
+      setGameId(full.id);
+      syncWithGameState(full);
+    } catch (e) {
+      setError(e.error?.detail || "Could not load game");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Effect: On mount, fetch latest games
+  useEffect(() => {
+    refreshGameList();
+  }, [refreshGameList]);
+
+  // Effect: when newGame should be called (start new on mount)
+  useEffect(() => {
+    if (!gameId) newGame();
+  }, [gameId, newGame]);
+
   return (
     <GameContext.Provider
       value={{
@@ -97,14 +138,35 @@ export function GameProvider({ children }) {
         resetGame,
         moveHistory,
         gameHistory,
-        saveGameToHistory,
         loadGameFromHistory,
         setGameHistory,
+        isLoading,
+        error,
+        refreshGameList,
       }}
     >
       {children}
     </GameContext.Provider>
   );
+}
+
+// Helpers for working with board/winning lines
+function boardHasWinningLine(boardState, symbol) {
+  const cells = boardState.split(",");
+  return boardGetWinningLine(boardState, symbol) !== null;
+}
+
+function boardGetWinningLine(boardState, symbol) {
+  const cells = boardState.split(",");
+  const lines = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+  for (const line of lines) {
+    if (line.every(idx => cells[idx] === symbol)) return line;
+  }
+  return null;
 }
 
 // PUBLIC_INTERFACE
