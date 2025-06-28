@@ -1,48 +1,83 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from "react";
+import "./App.css";
+import { GameProvider } from "./GameContext";
+import GameBoard from "./GameBoard";
+import GameControls from "./GameControls";
+import GameHistory from "./GameHistory";
 
 // PUBLIC_INTERFACE
 function App() {
-  const [theme, setTheme] = useState('light');
+  // App-level theme state (optional)
+  const [theme, setTheme] = useState("light");
 
-  // Effect to apply theme to document element
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
   // PUBLIC_INTERFACE
-  const toggleTheme = () => {
-    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-  };
+  const toggleTheme = () => setTheme((prev) => (prev === "light" ? "dark" : "light"));
 
   return (
     <div className="App">
       <header className="App-header">
-        <button 
-          className="theme-toggle" 
+        {/* Theme Toggle */}
+        <button
+          className="theme-toggle"
           onClick={toggleTheme}
-          aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
         >
-          {theme === 'light' ? '🌙 Dark' : '☀️ Light'}
+          {theme === "light" ? "🌙 Dark" : "☀️ Light"}
         </button>
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <p>
-          Current theme: <strong>{theme}</strong>
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
+        <h1 style={{
+          fontFamily: "inherit",
+          fontWeight: "bold",
+          fontSize: 42,
+          margin: "16px 0 4px 0",
+          letterSpacing: "2px",
+          color: "var(--text-primary)",
+        }}>Tic Tac Toe</h1>
+        <div style={{
+          color: "var(--text-secondary)", fontSize: 17, marginBottom: 24
+        }}>
+          Play and keep your games forever.
+        </div>
+
+        <GameProvider>
+          {/* Main Game Area */}
+          <div style={{
+            display: "flex",
+            flexDirection: "row",
+            gap: "48px",
+            justifyContent: "center",
+            alignItems: "flex-start",
+            marginTop: 18
+          }}>
+            <div>
+              <GameBoardWrapper />
+              <GameControls />
+            </div>
+            <div style={{
+              minWidth: 320,
+              maxWidth: 380
+            }}>
+              <GameHistory />
+            </div>
+          </div>
+        </GameProvider>
       </header>
     </div>
+  );
+}
+
+// Helper: Wrap GameBoard with correct data from context
+function GameBoardWrapper() {
+  const { board, handleSquareClick, winningLine } = require("./GameContext").useGame();
+  return (
+    <GameBoard
+      board={board}
+      onSquareClick={handleSquareClick}
+      winningLine={winningLine}
+    />
   );
 }
 
